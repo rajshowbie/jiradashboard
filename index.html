@@ -675,6 +675,7 @@ function authHeader() {
 }
 
 async function jiraGet(path) {
+  // Always use serverless proxy (required for CORS)
   const resp = await fetch('/api/jira-proxy', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -710,9 +711,10 @@ async function fetchData() {
     let startAt = 0, total = Infinity;
     while (startAt < total) {
       setLoadingText(`Fetching issues… (${startAt}/${total === Infinity ? '?' : total})`);
-      const jql = `parent = ${cfg.epic}`;
+      const project = cfg.epic.split('-')[0];
+      const jql = `parent = ${cfg.epic} AND project = ${project}`;
       const data = await jiraGet(
-        `/search?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=50&expand=changelog&fields=summary,status,priority,assignee,created,updated,resolutiondate,comment`
+        `/search/jql?query=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=50&expand=changelog&fields=summary,status,priority,assignee,created,updated,resolutiondate,comment`
       );
       total = data.total;
       allIssues.push(...data.issues);
