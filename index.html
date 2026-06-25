@@ -710,8 +710,9 @@ async function fetchData() {
     let startAt = 0, total = Infinity;
     while (startAt < total) {
       setLoadingText(`Fetching issues… (${startAt}/${total === Infinity ? '?' : total})`);
+      const jql = `parent = ${cfg.epic} OR (project = ${cfg.epic.split('-')[0]} AND type in (Story, Task, Bug))`;
       const data = await jiraGet(
-        `/search?jql=${encodeURIComponent(`"Epic Link" = ${cfg.epic} OR parent = ${cfg.epic}`)}&startAt=${startAt}&maxResults=50&expand=changelog&fields=summary,status,priority,assignee,created,updated,resolutiondate,comment`
+        `/search?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=50&expand=changelog&fields=summary,status,priority,assignee,created,updated,resolutiondate,comment`
       );
       total = data.total;
       allIssues.push(...data.issues);
