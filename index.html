@@ -675,14 +675,23 @@ function authHeader() {
 }
 
 async function jiraGet(path) {
-  const resp = await fetch(`${cfg.url}/rest/api/3${path}`, {
-    headers: { 'Authorization': authHeader(), 'Accept': 'application/json' }
+  const resp = await fetch('/api/jira-proxy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      url: cfg.url,
+      email: cfg.email,
+      token: cfg.token,
+      path: path,
+    }),
   });
   if (!resp.ok) {
     const txt = await resp.text();
     throw new Error(`Jira API ${resp.status}: ${txt.slice(0,200)}`);
   }
-  return resp.json();
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error + (data.detail ? ': ' + data.detail : ''));
+  return data;
 }
 
 function setProgress(pct) {
