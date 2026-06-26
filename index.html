@@ -723,14 +723,14 @@ async function fetchData() {
     const epicIssue = await epicResp.json();
     const epicId = epicIssue.id;
 
-    // 2. Fetch all child issues of epic
+    // 2. Fetch all child issues of epic using v2 API
     const allIssues = [];
     let startAt = 0, total = Infinity;
     while (startAt < total) {
       setLoadingText(`Fetching issues… (${startAt}/${total === Infinity ? '?' : total})`);
       const jql = `parent = ${epicId}`;
       const data = await jiraGet(
-        `/search?jql=${encodeURIComponent(jql)}&maxResults=50&startAt=${startAt}&expand=changelog&fields=summary,status,priority,assignee,created,updated,resolutiondate,comment,parent`
+        `/rest/api/2/search?jql=${encodeURIComponent(jql)}&maxResults=50&startAt=${startAt}&expand=changelog&fields=summary,status,priority,assignee,created,updated,resolutiondate,comment,parent`
       );
       total = data.total;
       allIssues.push(...data.issues);
