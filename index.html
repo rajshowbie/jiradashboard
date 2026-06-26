@@ -676,6 +676,7 @@ function authHeader() {
 
 async function jiraGet(path) {
   // Always use serverless proxy (required for CORS)
+  // Proxy adds /rest/api/3 automatically, so just pass the path
   const resp = await fetch('/api/jira-proxy', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -683,7 +684,7 @@ async function jiraGet(path) {
       url: cfg.url,
       email: cfg.email,
       token: cfg.token,
-      path: `/rest/api/3${path}`,
+      path: path,
     }),
   });
   if (!resp.ok) {
