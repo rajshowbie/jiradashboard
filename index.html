@@ -707,9 +707,20 @@ async function fetchData() {
   showLoading('Fetching epic children…');
   setProgress(10);
   try {
-    // 1. Fetch epic by key first to get its ID
+    // 1. Fetch epic by key first to get its ID (use v2 API)
     setLoadingText('Fetching epic…');
-    const epicIssue = await jiraGet(`/issues/${cfg.epic}?fields=key,id,summary`);
+    const epicResp = await fetch('/api/jira-proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: cfg.url,
+        email: cfg.email,
+        token: cfg.token,
+        path: `/rest/api/2/issue/${cfg.epic}?fields=key,id,summary`,
+      }),
+    });
+    if (!epicResp.ok) throw new Error('Failed to fetch epic');
+    const epicIssue = await epicResp.json();
     const epicId = epicIssue.id;
 
     // 2. Fetch all child issues of epic
