@@ -12,7 +12,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    const jiraUrl = `${url}/rest/api/3${path}`;
+    // If path already includes /rest/api/, use it as-is; otherwise prepend /rest/api/3
+    const jiraUrl = path.includes('/rest/api/')
+      ? `${url}${path}`
+      : `${url}/rest/api/3${path}`;
     const auth = Buffer.from(`${email}:${token}`).toString('base64');
 
     const response = await fetch(jiraUrl, {
