@@ -707,14 +707,19 @@ async function fetchData() {
   showLoading('Fetching epic children…');
   setProgress(10);
   try {
-    // 1. Fetch all child issues of epic via JQL
+    // 1. Fetch epic by key first to get its ID
+    setLoadingText('Fetching epic…');
+    const epicIssue = await jiraGet(`/issues/${cfg.epic}?fields=key,id,summary`);
+    const epicId = epicIssue.id;
+
+    // 2. Fetch all child issues of epic
     const allIssues = [];
     let startAt = 0, total = Infinity;
     while (startAt < total) {
       setLoadingText(`Fetching issues… (${startAt}/${total === Infinity ? '?' : total})`);
-      const jql = `project=${cfg.epic.split('-')[0]} AND parent=${cfg.epic} AND (created >= -365d OR updated >= -365d)`;
+      const jql = `parent = ${epicId}`;
       const data = await jiraGet(
-        `/search/jql?query=${encodeURIComponent(jql)}&maxResults=50&startAt=${startAt}&expand=changelog&fields=summary,status,priority,assignee,created,updated,resolutiondate,comment,parent`
+        `/search?jql=${encodeURIComponent(jql)}&maxResults=50&startAt=${startAt}&expand=changelog&fields=summary,status,priority,assignee,created,updated,resolutiondate,comment,parent`
       );
       total = data.total;
       allIssues.push(...data.issues);
