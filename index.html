@@ -683,7 +683,7 @@ async function jiraGet(path) {
       url: cfg.url,
       email: cfg.email,
       token: cfg.token,
-      path: path,
+      path: `/rest/api/3${path}`,
     }),
   });
   if (!resp.ok) {
@@ -711,10 +711,9 @@ async function fetchData() {
     let startAt = 0, total = Infinity;
     while (startAt < total) {
       setLoadingText(`Fetching issues… (${startAt}/${total === Infinity ? '?' : total})`);
-      const project = cfg.epic.split('-')[0];
-      const jql = `parent = ${cfg.epic} AND project = ${project}`;
+      const jql = `project=${cfg.epic.split('-')[0]} AND parent=${cfg.epic}`;
       const data = await jiraGet(
-        `/search/jql?query=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=50&expand=changelog&fields=summary,status,priority,assignee,created,updated,resolutiondate,comment`
+        `/search/jql?query=${encodeURIComponent(jql)}&maxResults=50&startAt=${startAt}&expand=changelog&fields=summary,status,priority,assignee,created,updated,resolutiondate,comment,parent`
       );
       total = data.total;
       allIssues.push(...data.issues);
