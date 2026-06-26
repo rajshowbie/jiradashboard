@@ -712,7 +712,7 @@ async function fetchData() {
     let startAt = 0, total = Infinity;
     while (startAt < total) {
       setLoadingText(`Fetching issues… (${startAt}/${total === Infinity ? '?' : total})`);
-      const jql = `project=${cfg.epic.split('-')[0]} AND parent=${cfg.epic}`;
+      const jql = `project=${cfg.epic.split('-')[0]} AND parent=${cfg.epic} AND (created >= -365d OR updated >= -365d)`;
       const data = await jiraGet(
         `/search/jql?query=${encodeURIComponent(jql)}&maxResults=50&startAt=${startAt}&expand=changelog&fields=summary,status,priority,assignee,created,updated,resolutiondate,comment,parent`
       );
