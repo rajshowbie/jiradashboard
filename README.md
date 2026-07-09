@@ -1,42 +1,63 @@
 # Jira Flow Timeline Dashboard
 
-A self-hosted, single-page app for visualizing Jira epic flow — state transitions, cycle time, rework patterns, and anomaly detection.
+A self-hosted Jira flow timeline dashboard where you can input any epic and instantly visualize issue state transitions, cycle time, and anomalies.
 
-## Deploy to Vercel
+## Quick Start
 
+### 1. Install dependencies
 ```bash
-npx vercel
+npm install
 ```
 
-Or connect this repo in [vercel.com](https://vercel.com) → New Project → import from GitHub. No build config needed — Vercel detects it as a static site automatically.
-
-## Run locally
-
+### 2. Start the server
 ```bash
-python3 -m http.server 8080
-# open http://localhost:8080
+npm start
 ```
 
-Or just double-click `index.html` in Finder.
+Then open **http://localhost:3000** in your browser.
 
-## Usage
+### 3. Enter your Jira details
+The settings form will open automatically. Fill in:
+- **Jira Base URL**: e.g., `https://showbie.atlassian.net`
+- **Email**: Your Jira email
+- **API Token**: Generate at [id.atlassian.net](https://id.atlassian.net/manage-profile/security/api-tokens)
+  - Select "Create API token with scopes"
+  - Choose `read:jira-work` scope
+- **Epic Issue Key**: e.g., `CT-127`
+- **Thresholds**: Customize stuck/rework/delay detection
 
-1. Open the app and click **Configure**
-2. Enter your Jira base URL (e.g. `https://yourorg.atlassian.net`)
-3. Enter your email and an [API token](https://id.atlassian.net/manage-profile/security/api-tokens)
-4. Enter the Epic issue key (e.g. `IOS-42`)
-5. Click **Connect & Fetch**
-
-Configuration is saved in `localStorage` — no server, no database.
+### 4. Fetch and visualize
+Click "Fetch Data" — the dashboard will populate with your epic's issues, transitions, and metrics.
 
 ## Features
 
-- **Timeline view** — Gantt-style bars showing each state segment per issue with hover tooltips
-- **Flow metrics** — total issues, closed %, avg cycle time, rework rate, stuck count
+- **Timeline view** — Gantt-style visualization of issue state progressions
+- **Flow metrics** — cycle time, rework rate, stuck issues, closed rate
 - **Anomaly detection** — stuck issues, excessive rework, regressions, critical delays
-- **Comment extraction** — filters Jira comments for blockers, decisions, and review notes
-- **CSV export** — full timeline data with transition chains
+- **Dynamic epic input** — change epic key anytime without code changes
+- **Saved settings** — credentials cached locally (localStorage) for next session
+- **No external deployment** — entirely self-hosted and self-contained
 
-## Tech
+## How it works
 
-Vanilla HTML/CSS/JS. No build step, no dependencies, no framework.
+1. **Server** (Node.js/Express): Fetches data from Jira API securely (no CORS issues)
+2. **Frontend** (HTML/JS): Displays timeline and metrics from server response
+3. **Settings**: Stored in browser localStorage — no database needed
+
+## Troubleshooting
+
+- **"Missing required environment variables"**: Fill in all fields in the settings form
+- **"Jira API 410"**: Ensure your API token has `read:jira-work` scope
+- **"Issue does not exist"**: Check that you have permission to access that epic
+- **Can't find your epic?**: Make sure the epic key is correct (e.g., `CT-127`, not `ct-127`)
+
+## Tech stack
+
+- **Backend**: Node.js + Express
+- **Frontend**: Vanilla HTML/CSS/JavaScript
+- **Auth**: Jira API Token (Basic Auth)
+- **Storage**: localStorage (credentials only)
+
+## License
+
+MIT
