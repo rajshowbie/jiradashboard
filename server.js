@@ -129,12 +129,27 @@ app.post('/api/fetch-data', async (req, res) => {
     let startAt = 0, total = Infinity;
 
     while (startAt < total) {
-      const data = await jiraGet(
-        jiraUrl,
-        jiraEmail,
-        jiraToken,
-        `/search?jql=${encodeURIComponent(jql)}&maxResults=50&startAt=${startAt}&expand=changelog&fields=summary,status,priority,assignee,created,updated,resolutiondate,comment,parent`
-      );
+      const auth = Buffer.from(`${jiraEmail}:${jiraToken}`).toString('base64');
+      const resp = await fetch(`${jiraUrl}/rest/api/2/search/jql`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: jql,
+          startAt,
+          maxResults: 50,
+          expand: 'changelog',
+          fields: ['summary', 'status', 'priority', 'assignee', 'created', 'updated', 'resolutiondate', 'comment', 'parent'],
+        }),
+      });
+      if (!resp.ok) {
+        const txt = await resp.text();
+        throw new Error(`Jira API ${resp.status}: ${txt.slice(0, 200)}`);
+      }
+      const data = await resp.json();
       total = data.total;
       allIssues.push(...data.issues);
       startAt += data.issues.length;
