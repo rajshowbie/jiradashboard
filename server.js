@@ -81,16 +81,22 @@ function processIssue(issue, config) {
   const isCritical = ['Highest','Critical','Blocker','High'].includes(priority);
   const isCriticalDelayed = isCritical && cycleDays !== null && cycleDays > CRITICAL_DAYS && !['done','closed','resolved'].includes(currentState.toLowerCase());
 
+  const getCommentText = (body) => {
+    if (typeof body === 'string') return body;
+    if (body?.content?.[0]?.content?.[0]?.text) return body.content[0].content[0].text;
+    return '';
+  };
+
   const comments = (issue.fields.comment?.comments || [])
     .filter(c => {
-      const body = (c.body?.content?.[0]?.content?.[0]?.text || c.body || '').toLowerCase();
-      return body.includes('block') || body.includes('decision') || body.includes('decided') ||
-             body.includes('review') || body.includes('concern') || body.includes('risk');
+      const text = getCommentText(c.body).toLowerCase();
+      return text.includes('block') || text.includes('decision') || text.includes('decided') ||
+             text.includes('review') || text.includes('concern') || text.includes('risk');
     })
     .map(c => ({
       author: c.author?.displayName || 'Unknown',
       date: c.created,
-      body: (c.body?.content?.[0]?.content?.[0]?.text || c.body || '').slice(0, 300),
+      body: getCommentText(c.body).slice(0, 300),
     }));
 
   return {
