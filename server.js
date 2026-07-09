@@ -125,36 +125,40 @@ app.post('/api/fetch-data', async (req, res) => {
 
     console.log('🔄 Fetching child issues…');
     const jql = `parent = ${epicId}`;
+    const auth = Buffer.from(`${jiraEmail}:${jiraToken}`).toString('base64');
     const allIssues = [];
-    let startAt = 0, total = Infinity;
+    let nextPageToken = undefined;
 
-    while (startAt < total) {
-      const auth = Buffer.from(`${jiraEmail}:${jiraToken}`).toString('base64');
-      const resp = await fetch(`${jiraUrl}/rest/api/2/search/jql`, {
+    while (true) {
+      const body = {
+        jql,
+        maxResults: 50,
+        expand: 'changelog',
+        fields: ['summary', 'status', 'priority', 'assignee', 'created', 'updated', 'resolutiondate', 'comment', 'parent'],
+      };
+      if (nextPageToken) body.nextPageToken = nextPageToken;
+
+      const resp = await fetch(`${jiraUrl}/rest/api/3/search/jql`, {
         method: 'POST',
         headers: {
           'Authorization': `Basic ${auth}`,
           'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          query: jql,
-          startAt,
-          maxResults: 50,
-          expand: 'changelog',
-          fields: ['summary', 'status', 'priority', 'assignee', 'created', 'updated', 'resolutiondate', 'comment', 'parent'],
-        }),
+        body: JSON.stringify(body),
       });
+
       if (!resp.ok) {
         const txt = await resp.text();
         throw new Error(`Jira API ${resp.status}: ${txt.slice(0, 200)}`);
       }
+
       const data = await resp.json();
-      total = data.total;
-      allIssues.push(...data.issues);
-      startAt += data.issues.length;
-      if (data.issues.length === 0) break;
-      console.log(`  ${allIssues.length}/${total}…`);
+      allIssues.push(...(data.issues || []));
+      console.log(`  ${allIssues.length} issues fetched…`);
+
+      if (!data.nextPageToken) break;
+      nextPageToken = data.nextPageToken;
     }
 
     console.log(`✓ Fetched ${allIssues.length} issues`);
