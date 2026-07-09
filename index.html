@@ -166,15 +166,25 @@
     </div>
 
     <div id="dashboard" style="display:none">
-      <div class="metrics-grid" id="metricsGrid"></div>
-      <div id="anomalySection" style="display:none">
-        <div class="section-title">⚠ Anomalies <span class="count" id="anomalyCount">0</span></div>
-        <div class="anomaly-list" id="anomalyList"></div>
-        <div class="divider"></div>
+      <div class="card" style="margin-bottom:16px;">
+        <div style="margin-bottom:12px;">
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.7px;font-weight:500;">Filter by State</div>
+          <div class="legend" id="stateLegend"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+          <div>
+            <label class="form-label">Start Date</label>
+            <input class="form-input" id="filterStartDate" type="date" onchange="applyFilters()">
+          </div>
+          <div>
+            <label class="form-label">End Date</label>
+            <input class="form-input" id="filterEndDate" type="date" onchange="applyFilters()">
+          </div>
+        </div>
+        <button class="btn btn-ghost" onclick="resetFilters()" style="margin-top:12px;width:100%;">Reset Filters</button>
       </div>
-      <div class="legend" id="stateLegend"></div>
       <div id="scaleInfo" style="font-size:11px;color:var(--text-muted);margin-bottom:8px;"></div>
-      <div class="card" style="padding:0;overflow:hidden;">
+      <div class="card" style="padding:0;overflow:hidden;margin-bottom:20px;">
         <div style="overflow-x:auto;">
           <table class="timeline-table" id="timelineTable">
             <thead>
@@ -192,12 +202,73 @@
           </table>
         </div>
       </div>
+      <div class="divider"></div>
+      <div class="metrics-grid" id="metricsGrid"></div>
+      <div id="anomalySection" style="display:none">
+        <div class="section-title">⚠ Anomalies <span class="count" id="anomalyCount">0</span></div>
+        <div class="anomaly-list" id="anomalyList"></div>
+        <div class="divider"></div>
+      </div>
     </div>
   </main>
 </div>
 
 <script>
 let data = null;
+let selectedStates = new Set();
+
+function applyFilters() {
+  if (!data) return;
+
+  const startDate = document.getElementById('filterStartDate').value;
+  const endDate = document.getElementById('filterEndDate').value;
+
+  let filteredIssues = data.issues;
+
+  // Filter by selected states
+  if (selectedStates.size > 0) {
+    filteredIssues = filteredIssues.filter(issue =>
+      selectedStates.has(issue.status.toLowerCase())
+    );
+  }
+
+  // Filter by date range (issue created date)
+  if (startDate || endDate) {
+    const start = startDate ? new Date(startDate).getTime() : null;
+    const end = endDate ? new Date(endDate).getTime() : null;
+    filteredIssues = filteredIssues.filter(issue => {
+      const created = new Date(issue.created).getTime();
+      if (start && created < start) return false;
+      if (end && created > end + 86400000) return false;
+      return true;
+    });
+  }
+
+  renderTimeline(filteredIssues);
+}
+
+function toggleStateFilter(state) {
+  if (selectedStates.has(state)) {
+    selectedStates.delete(state);
+  } else {
+    selectedStates.add(state);
+  }
+  applyFilters();
+}
+
+function resetFilters() {
+  selectedStates.clear();
+  if (data) {
+    const allDates = data.issues.flatMap(i => new Date(i.created).getTime());
+    if (allDates.length > 0) {
+      const minDate = new Date(Math.min(...allDates));
+      const maxDate = new Date(Math.max(...allDates));
+      document.getElementById('filterStartDate').value = minDate.toISOString().split('T')[0];
+      document.getElementById('filterEndDate').value = maxDate.toISOString().split('T')[0];
+    }
+  }
+  applyFilters();
+}
 
 function openSettings() {
   document.getElementById('settingsModal').style.display = 'flex';
@@ -293,6 +364,19 @@ function renderDashboard() {
 
   document.getElementById('epicBadge').textContent = data.epic;
 
+  // Set date range based on issues
+  const allDates = issues.flatMap(i => new Date(i.created).getTime());
+  if (allDates.length > 0) {
+    const minDate = new Date(Math.min(...allDates));
+    const maxDate = new Date(Math.max(...allDates));
+    const minStr = minDate.toISOString().split('T')[0];
+    const maxStr = maxDate.toISOString().split('T')[0];
+    document.getElementById('filterStartDate').min = minStr;
+    document.getElementById('filterEndDate').max = maxStr;
+    document.getElementById('filterStartDate').value = minStr;
+    document.getElementById('filterEndDate').value = maxStr;
+  }
+
   // Metrics
   const total = issues.length;
   const closed = issues.filter(i => i.status.toLowerCase().includes('done') || i.status.toLowerCase().includes('closed')).length;
@@ -336,14 +420,26 @@ function renderDashboard() {
   document.getElementById('scaleInfo').textContent = `Timeline spans ${totalDays} days`;
 
   const seenStates = new Set(issues.flatMap(i => i.transitions.map(t => t.state)));
-  document.getElementById('stateLegend').innerHTML = Array.from(seenStates).map(s =>
-    `<div class="legend-item"><div class="legend-dot" style="background:${stateColor(s)}"></div>${s}</div>`
-  ).join('');
+  document.getElementById('stateLegend').innerHTML = Array.from(seenStates).map(s => {
+    const isSelected = selectedStates.has(s.toLowerCase());
+    return `<div class="legend-item" onclick="toggleStateFilter('${s.toLowerCase()}')" style="cursor:pointer;opacity:${isSelected ? 1 : 0.5};transition:opacity 0.2s;"><div class="legend-dot" style="background:${stateColor(s)};border:${isSelected ? '2px solid white' : 'none'};"></div>${s}</div>`;
+  }).join('');
+
+  renderTimeline(issues);
+}
+
+function renderTimeline(issues) {
+  if (!data) return;
+
+  const allDates = issues.flatMap(i => i.transitions.flatMap(t => [new Date(t.start).getTime(), new Date(t.end).getTime()]));
+  const minDate = allDates.length ? Math.min(...allDates) : Date.now() - 30*86400000;
+  const maxDate = allDates.length ? Math.max(...allDates) : Date.now();
+  const span = maxDate - minDate || 1;
 
   document.getElementById('timelineBody').innerHTML = issues.map(issue => {
     const flags = [];
     if (issue.isStuck) flags.push(`<span class="flag flag-stuck">⏱ Stuck</span>`);
-    if (issue.reworkCount > cfg.REWORK_COUNT) flags.push(`<span class="flag flag-rework">↩ Rework×${issue.reworkCount}</span>`);
+    if (issue.reworkCount > data.config.REWORK_COUNT) flags.push(`<span class="flag flag-rework">↩ Rework×${issue.reworkCount}</span>`);
 
     const barSegments = issue.transitions.map(t => {
       const left = ((new Date(t.start).getTime() - minDate) / span) * 100;
